@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, startAfter, limit } from 'firebase/firestore'
-import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
+import { getAuth, signInWithCustomToken, signOut, onAuthStateChanged } from 'firebase/auth'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import * as exifr from 'exifr'
 import { resolveCaptureDate } from './date'
@@ -94,6 +94,37 @@ function getOriginalDimensions(file) {
   })
 }
 
+export async function ensureAuth() {
+  if (!firebaseReady || !auth) return null
+  if (auth.currentUser) return auth.currentUser
+
+  // 1. Wait for Firebase Auth to finish restoring session from IndexedDB on page load
+  const restoredUser = await new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe()
+      resolve(user)
+    })
+    setTimeout(() => resolve(auth.currentUser), 1500)
+  })
+
+  if (restoredUser) return restoredUser
+
+  // 2. Auto-renew session if passcode is stored in session storage
+  const savedPasscode = sessionStorage.getItem('kioku-passcode')
+  if (savedPasscode && functions) {
+    try {
+      const issueSession = httpsCallable(functions, 'issueArchiveSession')
+      const { data } = await issueSession({ passcode: savedPasscode })
+      const userCredential = await signInWithCustomToken(auth, data.token)
+      return userCredential.user
+    } catch (err) {
+      console.warn('Auto re-authentication failed:', err)
+    }
+  }
+
+  return auth.currentUser
+}
+
 export async function unlock(passcode) {
   const demoPasscode = import.meta.env.VITE_DEMO_PASSCODE || 'memory'
   if (import.meta.env.DEV && passcode === demoPasscode) {
@@ -104,12 +135,14 @@ export async function unlock(passcode) {
   const issueSession = httpsCallable(functions, 'issueArchiveSession')
   const { data } = await issueSession({ passcode })
   await signInWithCustomToken(auth, data.token)
+  sessionStorage.setItem('kioku-passcode', passcode)
   localDemoMode = false
   return { demo: false }
 }
 
 export async function lockArchive() {
   localDemoMode = false
+  sessionStorage.removeItem('kioku-passcode')
   if (auth) await signOut(auth)
 }
 
@@ -394,32 +427,47 @@ export async function deleteMediaItem(item) {
     return
   }
 
+  if (!firebaseReady) {
+    throw new Error('Firebase is not configured or connected.')
+  }
+
+  // Ensure active Firebase authentication (restores session from IndexedDB or re-authenticates)
+  const currentUser = await ensureAuth()
+  if (!currentUser) {
+    throw new Error('Archive session unauthenticated. Please re-enter your passcode.')
+  }
+
   let deleted = false
+  let lastError = null
 
   // 1. Attempt Cloud Function to delete R2 storage files and Firestore record
-  if (firebaseReady && functions) {
+  if (functions) {
     try {
       const remove = httpsCallable(functions, 'deleteArchiveMedia')
-      await remove({ id: item.id })
-      deleted = true
+      const result = await remove({ id: item.id })
+      if (result?.data?.ok) {
+        deleted = true
+      }
     } catch (err) {
       console.warn('R2 storage delete function notice:', err)
+      lastError = err
     }
   }
 
-  // 2. Direct Firestore deletion (ensures persistent deletion on refresh)
-  if (firebaseReady && db) {
+  // 2. Direct Firestore deletion (guarantees removal from database)
+  if (db) {
     try {
       const mediaRef = doc(db, 'media', item.id)
       await deleteDoc(mediaRef)
       deleted = true
     } catch (err) {
       console.warn('Firestore direct delete notice:', err)
+      if (!lastError) lastError = err
     }
   }
 
-  if (!deleted && !firebaseReady) {
-    throw new Error('Firebase is not configured or connected.')
+  if (!deleted) {
+    throw new Error(lastError?.message || 'Failed to delete image. Permission denied.')
   }
 }
 
