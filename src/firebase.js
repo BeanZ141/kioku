@@ -109,16 +109,26 @@ export async function ensureAuth() {
 
   if (restoredUser) return restoredUser
 
-  // 2. Auto-renew session if passcode is stored in session storage
-  const savedPasscode = sessionStorage.getItem('kioku-passcode')
+  // 2. Auto-renew session if passcode is stored in session storage or prompt user
+  let savedPasscode = sessionStorage.getItem('kioku-passcode')
+  if (!savedPasscode && typeof window !== 'undefined') {
+    const input = window.prompt('Enter your Archive Passcode to authorize admin changes/deletion:')
+    if (input) {
+      savedPasscode = input.trim()
+    }
+  }
+
   if (savedPasscode && functions) {
     try {
       const issueSession = httpsCallable(functions, 'issueArchiveSession')
       const { data } = await issueSession({ passcode: savedPasscode })
       const userCredential = await signInWithCustomToken(auth, data.token)
+      sessionStorage.setItem('kioku-passcode', savedPasscode)
       return userCredential.user
     } catch (err) {
       console.warn('Auto re-authentication failed:', err)
+      sessionStorage.removeItem('kioku-passcode')
+      throw new Error('Invalid passcode provided for archive session.')
     }
   }
 
