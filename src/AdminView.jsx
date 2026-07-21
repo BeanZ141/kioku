@@ -1437,6 +1437,8 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
                       Download Converted WebP
                     </a>
                   </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1609,6 +1611,7 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
                 )}
               </div>
             )}
+          </div>
           </div>
         </details>
 
