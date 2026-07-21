@@ -234,12 +234,12 @@ button:disabled {
     height: 140px;
     overflow: hidden;
     cursor: pointer;
-    transition: width 0.25s ease 0s, border-color 0.3s ease;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
     border: 1px solid transparent;
     background: var(--paper-deep);
     padding: 0;
     outline: none;
-    will-change: width;
+    will-change: width, transform;
     filter: grayscale(1);
 }
 
@@ -256,7 +256,7 @@ button:disabled {
     height: 100%;
     object-fit: cover;
     opacity: 0.65;
-    transition: opacity 0.2s ease;
+    transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .archive-tag-label {
@@ -276,12 +276,13 @@ button:disabled {
     background: #00000038;
     backdrop-filter: blur(10px);
     text-align: center;
-    transition: 200ms;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .archive-tag-item:hover {
     width: 230px;
     filter: grayscale(0);
+    transform: translateY(-3px);
 }
 
 .archive-tag-item:hover .archive-tag-label {
@@ -379,11 +380,23 @@ button:disabled {
     align-items: start
 }
 
+@keyframes memoryReveal {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .memory {
     min-width: 0;
     content-visibility: auto;
     contain-intrinsic-size: auto 300px;
-    contain: layout style paint
+    contain: layout style paint;
+    animation: memoryReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .layout-0 {
@@ -471,7 +484,16 @@ button:disabled {
     border: 0;
     display: block;
     width: 100%;
-    overflow: hidden
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s ease;
+    will-change: transform;
+}
+
+.memory:hover .image-button,
+.cosmos-item:hover .image-button {
+    transform: translateY(-5px) scale(1.01);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14);
 }
 
 .archive-image {
@@ -487,7 +509,12 @@ button:disabled {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transition: transform .55s cubic-bezier(.2, .7, .2, 1), filter .4s, opacity .4s ease-in-out
+    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease, opacity 0.4s ease-out;
+}
+
+.memory:hover .archive-image img,
+.cosmos-item:hover .archive-image img {
+    transform: scale(1.05);
 }
 
 .archive-image img.loaded {
@@ -2395,6 +2422,7 @@ html[data-theme="light"] .tag-manager-grid {
     margin-bottom: 28px;
     display: flex;
     flex-direction: column;
+    animation: memoryReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .cosmos-item .image-button {
