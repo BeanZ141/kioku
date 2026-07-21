@@ -401,20 +401,10 @@ export async function deleteMediaItem(item) {
     return
   }
 
-  // 1. Direct Firestore record deletion (always executes cleanly)
+  // Direct Firestore record deletion
   if (firebaseReady && db) {
     const mediaRef = doc(db, 'media', item.id)
     await deleteDoc(mediaRef)
-  }
-
-  // 2. Cloud Function R2 cleanup attempt (if available)
-  if (firebaseReady && functions) {
-    try {
-      const remove = httpsCallable(functions, 'deleteArchiveMedia')
-      await remove({ id: item.id })
-    } catch (err) {
-      console.warn('R2 storage delete notice:', err)
-    }
   }
 }
 
