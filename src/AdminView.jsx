@@ -86,6 +86,29 @@ function getLogStyle(log) {
   return { color: 'var(--ink)' }
 }
 
+function AccordionSection({ id, num, title, children }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className={`admin-accordion-section ${open ? 'is-open' : ''}`} id={id}>
+      <button
+        type="button"
+        className="admin-accordion-header"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span className="q">{num}</span>
+        <h2>{title}</h2>
+        <span className="accordion-icon">+</span>
+      </button>
+      <div className="admin-accordion-collapse">
+        <div className="admin-accordion-inner">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MetadataEditorSection({ media, setMedia, loading, refreshMedia }) {
   const [selectedId, setSelectedId] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -1325,600 +1348,536 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {/* ── Section 01: Single Image Upload & Quality Comparator ── */}
-        <details id="sec-comparator">
-          <summary>
-            <span className="q">01</span>
-            <h2>Quality Comparator</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '40px', alignItems: 'start' }}>
-              <div>
-                <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
-                  Upload a single photo to see file size savings and inspect WebP quality.
-                </p>
-                <div
-                  className="drop-zone"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleFileDrop}
-                  onClick={() => document.getElementById('admin-file-input').click()}
-                >
-                  <input id="admin-file-input" type="file" accept="image/*" hidden onChange={handleFileSelect} />
-                  <span>+</span>
-                  <strong>Drop image here</strong>
-                  <small>JPEG, PNG, HEIC</small>
-                </div>
+        <AccordionSection id="sec-comparator" num="01" title="Quality Comparator">
+          <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '40px', alignItems: 'start' }}>
+            <div>
+              <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
+                Upload a single photo to see file size savings and inspect WebP quality.
+              </p>
+              <div
+                className="drop-zone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleFileDrop}
+                onClick={() => document.getElementById('admin-file-input').click()}
+              >
+                <input id="admin-file-input" type="file" accept="image/*" hidden onChange={handleFileSelect} />
+                <span>+</span>
+                <strong>Drop image here</strong>
+                <small>JPEG, PNG, HEIC</small>
+              </div>
 
+              {selectedFile && (
+                <div className="file-info-badge">
+                  <span className="file-name">{selectedFile.name}</span>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="comparator-header" style={{ margin: 0, paddingBottom: '10px' }}>
                 {selectedFile && (
-                  <div className="file-info-badge">
-                    <span className="file-name">{selectedFile.name}</span>
+                  <div className="comparator-slider-wrap">
+                    <span className="slider-val">Quality: {quality}%</span>
+                    <input type="range" min="10" max="100" value={quality} onChange={(e) => setQuality(Number(e.target.value))} />
                   </div>
                 )}
               </div>
 
-              <div>
-                <div className="comparator-header" style={{ margin: 0, paddingBottom: '10px' }}>
-                  {selectedFile && (
-                    <div className="comparator-slider-wrap">
-                      <span className="slider-val">Quality: {quality}%</span>
-                      <input type="range" min="10" max="100" value={quality} onChange={(e) => setQuality(Number(e.target.value))} />
-                    </div>
-                  )}
+              {!selectedFile ? (
+                <div className="comparator-placeholder" style={{ height: '300px' }}>
+                  <p>Upload a photo on the left to see live WebP quality comparisons and inspect detail differences.</p>
                 </div>
-
-                {!selectedFile ? (
-                  <div className="comparator-placeholder" style={{ height: '300px' }}>
-                    <p>Upload a photo on the left to see live WebP quality comparisons and inspect detail differences.</p>
-                  </div>
-                ) : (
-                  <div className="comparator-work-area">
-                    {/* Toolbar */}
-                    <div className="comparator-toolbar">
-                      <button
-                        className={`ink-button${showOriginal ? ' active-compare' : ''}`}
-                        onClick={() => setShowOriginal(!showOriginal)}
-                        style={{ flex: 1 }}
-                      >
-                        {showOriginal ? '● Original' : '● WebP — click to compare'}
-                      </button>
-                      <button
-                        className={`ink-button${isZoomed ? ' active-compare' : ''}`}
-                        onClick={() => setIsZoomed(!isZoomed)}
-                        style={{ width: '110px' }}
-                      >
-                        {isZoomed ? 'Zoom Out' : 'Zoom 2×'}
-                      </button>
-                    </div>
-
-                    {/* Viewport */}
-                    <div
-                      className="comparison-viewport"
-                      ref={containerRef}
-                      onMouseMove={isZoomed ? handleMouseMove : undefined}
-                      style={{ height: '360px' }}
+              ) : (
+                <div className="comparator-work-area">
+                  {/* Toolbar */}
+                  <div className="comparator-toolbar">
+                    <button
+                      className={`ink-button${showOriginal ? ' active-compare' : ''}`}
+                      onClick={() => setShowOriginal(!showOriginal)}
+                      style={{ flex: 1 }}
                     >
-                      <img
-                        src={showOriginal ? origUrl : webpUrl}
-                        alt={showOriginal ? 'Original' : 'WebP'}
-                        style={{
-                          objectFit: isZoomed ? 'none' : 'contain',
-                          transform: isZoomed ? 'scale(2.5)' : 'none',
-                          transformOrigin: `${panX}% ${panY}%`,
-                        }}
-                        draggable={false}
-                      />
-                      <span className="viewport-badge">
-                        {showOriginal ? 'Original' : `WebP ${quality}%`}
-                      </span>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="comparator-stats">
-                      <div className="stat-card">
-                        <span className="stat-title">Original</span>
-                        <span className="stat-value">{fmt(origSize)}</span>
-                      </div>
-                      <div className="stat-card">
-                        <span className="stat-title">WebP</span>
-                        <span className="stat-value">{fmt(webpSize)}</span>
-                      </div>
-                      <div className="stat-card savings">
-                        <span className="stat-title">Saved</span>
-                        <span className="stat-value">-{savingPercent}%</span>
-                      </div>
-                    </div>
-
-                    <a
-                      href={webpUrl}
-                      download={`${selectedFile.name.replace(/\.[^/.]+$/, '')}_q${quality}.webp`}
-                      className="ink-button"
-                      style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '10px' }}
+                      {showOriginal ? '● Original' : '● WebP — click to compare'}
+                    </button>
+                    <button
+                      className={`ink-button${isZoomed ? ' active-compare' : ''}`}
+                      onClick={() => setIsZoomed(!isZoomed)}
+                      style={{ width: '110px' }}
                     >
-                      Download Converted WebP
-                    </a>
+                      {isZoomed ? 'Zoom Out' : 'Zoom 2×'}
+                    </button>
                   </div>
-                )}
-              </div>
+
+                  {/* Viewport */}
+                  <div
+                    className="comparison-viewport"
+                    ref={containerRef}
+                    onMouseMove={isZoomed ? handleMouseMove : undefined}
+                    style={{ height: '360px' }}
+                  >
+                    <img
+                      src={showOriginal ? origUrl : webpUrl}
+                      alt={showOriginal ? 'Original' : 'WebP'}
+                      style={{
+                        objectFit: isZoomed ? 'none' : 'contain',
+                        transform: isZoomed ? 'scale(2.5)' : 'none',
+                        transformOrigin: `${panX}% ${panY}%`,
+                      }}
+                      draggable={false}
+                    />
+                    <span className="viewport-badge">
+                      {showOriginal ? 'Original' : `WebP ${quality}%`}
+                    </span>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="comparator-stats">
+                    <div className="stat-card">
+                      <span className="stat-title">Original</span>
+                      <span className="stat-value">{fmt(origSize)}</span>
+                    </div>
+                    <div className="stat-card">
+                      <span className="stat-title">WebP</span>
+                      <span className="stat-value">{fmt(webpSize)}</span>
+                    </div>
+                    <div className="stat-card savings">
+                      <span className="stat-title">Saved</span>
+                      <span className="stat-value">-{savingPercent}%</span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={webpUrl}
+                    download={`${selectedFile.name.replace(/\.[^/.]+$/, '')}_q${quality}.webp`}
+                    className="ink-button"
+                    style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '10px' }}
+                  >
+                    Download Converted WebP
+                  </a>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </details>
+        </AccordionSection>
 
         {/* ── Section 02: Bulk Folder Converter ── */}
-        <details id="sec-bulk-converter">
-          <summary>
-            <span className="q">02</span>
-            <h2>Bulk Folder Converter</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
-              Select a folder → convert all images to WebP → download as ZIP.
-              <br />
-              <span style={{ opacity: 0.7 }}>ZIP uses STORE mode (zero compression) so image quality is untouched.</span>
-            </p>
+        <AccordionSection id="sec-bulk-converter" num="02" title="Bulk Folder Converter">
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
+            Select a folder → convert all images to WebP → download as ZIP.
+            <br />
+            <span style={{ opacity: 0.7 }}>ZIP uses STORE mode (zero compression) so image quality is untouched.</span>
+          </p>
 
-            <label className="ink-button" style={{ display: 'inline-block', minWidth: '200px', textAlign: 'center', cursor: 'pointer', marginBottom: '15px' }}>
-              Choose Folder
-              {/* @ts-ignore */}
-              <input type="file" accept="image/*" multiple webkitdirectory="" hidden onChange={handleBulkSelect} />
-            </label>
+          <label className="ink-button" style={{ display: 'inline-block', minWidth: '200px', textAlign: 'center', cursor: 'pointer', marginBottom: '15px' }}>
+            Choose Folder
+            {/* @ts-ignore */}
+            <input type="file" accept="image/*" multiple webkitdirectory="" hidden onChange={handleBulkSelect} />
+          </label>
 
-            {bulkFiles.length > 0 && (
-              <div className="bulk-panel" style={{ maxWidth: '600px' }}>
-                <p className="bulk-count">{bulkFiles.length} images selected</p>
+          {bulkFiles.length > 0 && (
+            <div className="bulk-panel" style={{ maxWidth: '600px' }}>
+              <p className="bulk-count">{bulkFiles.length} images selected</p>
 
-                <div className="comparator-slider-wrap" style={{ marginBottom: '15px' }}>
-                  <span className="slider-val">Quality: {bulkQuality}%</span>
-                  <input type="range" min="10" max="100" value={bulkQuality} onChange={(e) => setBulkQuality(Number(e.target.value))} />
-                </div>
-
-                <button className="ink-button" onClick={saveBulkWebpFiles} disabled={bulkSaving} style={{ width: '100%' }}>
-                  {bulkSaving ? `Converting ${bulkProgress}/${bulkFiles.length}...` : 'Convert & Download ZIP'}
-                </button>
-
-                {/* Progress bar */}
-                {bulkSaving && (
-                  <div className="bulk-progress-wrap">
-                    <div className="bulk-progress-bar" style={{ width: `${bulkPercent}%` }} />
-                  </div>
-                )}
-
-                {/* Status + ETA */}
-                {bulkStatus && (
-                  <p className="bulk-status-text">
-                    {bulkStatus}
-                    {bulkEta && <span className="bulk-eta"> — ~{bulkEta} remaining</span>}
-                  </p>
-                )}
+              <div className="comparator-slider-wrap" style={{ marginBottom: '15px' }}>
+                <span className="slider-val">Quality: {bulkQuality}%</span>
+                <input type="range" min="10" max="100" value={bulkQuality} onChange={(e) => setBulkQuality(Number(e.target.value))} />
               </div>
-            )}
-          </div>
-          </div>
-        </details>
+
+              <button className="ink-button" onClick={saveBulkWebpFiles} disabled={bulkSaving} style={{ width: '100%' }}>
+                {bulkSaving ? `Converting ${bulkProgress}/${bulkFiles.length}...` : 'Convert & Download ZIP'}
+              </button>
+
+              {/* Progress bar */}
+              {bulkSaving && (
+                <div className="bulk-progress-wrap">
+                  <div className="bulk-progress-bar" style={{ width: `${bulkPercent}%` }} />
+                </div>
+              )}
+
+              {/* Status + ETA */}
+              {bulkStatus && (
+                <p className="bulk-status-text">
+                  {bulkStatus}
+                  {bulkEta && <span className="bulk-eta"> — ~{bulkEta} remaining</span>}
+                </p>
+              )}
+            </div>
+          )}
+        </AccordionSection>
 
         {/* ── Section 03: Bulk Folder Uploader ── */}
-        <details id="sec-bulk-uploader">
-          <summary>
-            <span className="q">03</span>
-            <h2>Bulk Folder Uploader</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
-              Upload a folder of converted WebP images directly to the cloud storage archive.
-            </p>
+        <AccordionSection id="sec-bulk-uploader" num="03" title="Bulk Folder Uploader">
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
+            Upload a folder of converted WebP images directly to the cloud storage archive.
+          </p>
 
-            <label className="ink-button" style={{ display: 'inline-block', minWidth: '200px', textAlign: 'center', cursor: 'pointer', marginBottom: '15px' }}>
-              Select WebP Folder
-              {/* @ts-ignore */}
-              <input type="file" accept="image/*" multiple webkitdirectory="" hidden onChange={handleUploadSelect} />
-            </label>
+          <label className="ink-button" style={{ display: 'inline-block', minWidth: '200px', textAlign: 'center', cursor: 'pointer', marginBottom: '15px' }}>
+            Select WebP Folder
+            {/* @ts-ignore */}
+            <input type="file" accept="image/*" multiple webkitdirectory="" hidden onChange={handleUploadSelect} />
+          </label>
 
-            {(uploadFiles.length > 0 || uploadLogs.length > 0 || uploadDone) && (
-              <div className="bulk-panel" style={{ maxWidth: '700px' }}>
-                {uploadDone && uploadReport ? (
-                  <div style={{ background: 'rgba(46, 204, 113, 0.05)', border: '1px solid rgba(46, 204, 113, 0.2)', padding: '15px', marginBottom: '15px' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>Upload Batch Finished Successfully.</h4>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <li>Total Images Uploaded: <strong style={{ color: 'var(--ink)' }}>{uploadReport.total}</strong></li>
-                      <li>Total Volume Sent: <strong style={{ color: 'var(--ink)' }}>{uploadReport.size}</strong></li>
-                      <li>Elapsed Time: <strong style={{ color: 'var(--ink)' }}>{uploadReport.time}</strong></li>
-                      <li>Average Throughput: <strong style={{ color: '#2ecc71' }}>{uploadReport.speed}</strong></li>
-                    </ul>
-                    <button
-                      className="ink-button"
-                      onClick={resetBulkUploader}
-                      style={{ width: '100%', marginTop: '12px', padding: '6px', fontSize: '12px' }}
-                    >
-                      Clear &amp; Select New Folder
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <p className="bulk-count">
-                      {failedUploads.length > 0
-                        ? `${failedUploads.length} failed images ready to retry`
-                        : `${uploadFiles.length} images ready to upload`}
-                    </p>
-
-                    {sandbox && (
-                      <div style={{ background: 'rgba(241, 196, 15, 0.08)', border: '1px solid rgba(241, 196, 15, 0.2)', padding: '10px 12px', fontSize: '12px', color: '#f1c40f', marginBottom: '12px', lineHeight: '1.4' }}>
-                        ⚠️ <strong>Sandbox Mode is ON</strong>. Uploads will be simulated locally. To push files to Cloudflare R2, turn Sandbox Mode OFF in the header.
-                      </div>
-                    )}
-
-                    <button
-                      className="ink-button"
-                      onClick={startBulkUpload}
-                      disabled={uploadBusy}
-                      style={{ width: '100%', marginTop: '10px' }}
-                    >
-                      {uploadBusy
-                        ? `Uploading...`
-                        : failedUploads.length > 0
-                          ? `Retry Failed Uploads (${failedUploads.length})`
-                          : 'Start Cloud Upload'}
-                    </button>
-
-                    {/* Progress bar */}
-                    {uploadBusy && (
-                      <div className="bulk-progress-wrap">
-                        <div className="bulk-progress-bar" style={{ width: `${Math.round((uploadProgress / (failedUploads.length > 0 ? failedUploads.length : uploadFiles.length)) * 100)}%` }} />
-                      </div>
-                    )}
-
-                    {/* Status, ETA & Upload Speed */}
-                    {uploadStatus && (
-                      <div className="bulk-status-text" style={{ marginTop: '12px' }}>
-                        <p style={{ margin: 0, fontWeight: '600', color: 'var(--ink)' }}>{uploadStatus}</p>
-                        <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
-                          {uploadSpeed && <span>Speed: <strong style={{ color: '#2ecc71' }}>{uploadSpeed}</strong></span>}
-                          {uploadEta && <span>ETA: <strong className="bulk-eta">{uploadEta}</strong></span>}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Live console terminal */}
-                {uploadLogs.length > 0 && (
-                  <div style={{ marginTop: '15px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                      Activity Logs
-                    </label>
-                    <div className="upload-console-log">
-                      {uploadLogs.map((log, index) => (
-                        <div key={index} className="log-line">{log}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Failed uploads retry section */}
-                {!uploadBusy && failedUploads.length > 0 && (
-                  <div className="failed-uploads-card">
-                    <h4>⚠️ Failed Uploads Detail</h4>
-                    <div className="failed-uploads-list">
-                      {failedUploads.map((item, index) => (
-                        <div key={index} className="failed-item">
-                          <span className="failed-name">{item.file.name}</span>
-                          <span className="failed-reason">{item.error}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          </div>
-        </details>
-
-        {/* ── Section 04: Direct Image Uploader ── */}
-        <details id="sec-direct-uploader">
-          <summary>
-            <span className="q">04</span>
-            <h2>Direct Image Uploader</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
-              Upload individual images (single or multiple) directly to the cloud archive without needing a whole folder.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
-              <div>
-                <div
-                  className="drop-zone"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDirectDrop}
-                  onClick={() => document.getElementById('admin-direct-file-input').click()}
-                  style={{ marginBottom: '15px' }}
-                >
-                  <input
-                    id="admin-direct-file-input"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    hidden
-                    onChange={handleDirectSelect}
-                  />
-                  <span>+</span>
-                  <strong>Choose Image Files or Drop Them Here</strong>
-                  <small>Select single or multiple photos (JPEG, PNG, WebP, HEIC)</small>
+          {(uploadFiles.length > 0 || uploadLogs.length > 0 || uploadDone) && (
+            <div className="bulk-panel" style={{ maxWidth: '700px' }}>
+              {uploadDone && uploadReport ? (
+                <div style={{ background: 'rgba(46, 204, 113, 0.05)', border: '1px solid rgba(46, 204, 113, 0.2)', padding: '15px', marginBottom: '15px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>Upload Batch Finished Successfully.</h4>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <li>Total Images Uploaded: <strong style={{ color: 'var(--ink)' }}>{uploadReport.total}</strong></li>
+                    <li>Total Volume Sent: <strong style={{ color: 'var(--ink)' }}>{uploadReport.size}</strong></li>
+                    <li>Elapsed Time: <strong style={{ color: 'var(--ink)' }}>{uploadReport.time}</strong></li>
+                    <li>Average Throughput: <strong style={{ color: '#2ecc71' }}>{uploadReport.speed}</strong></li>
+                  </ul>
+                  <button
+                    className="ink-button"
+                    onClick={resetBulkUploader}
+                    style={{ width: '100%', marginTop: '12px', padding: '6px', fontSize: '12px' }}
+                  >
+                    Clear &amp; Select New Folder
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <p className="bulk-count">
+                    {failedUploads.length > 0
+                      ? `${failedUploads.length} failed images ready to retry`
+                      : `${uploadFiles.length} images ready to upload`}
+                  </p>
 
-                {directFiles.length > 0 && (
-                  <div className="direct-files-preview">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <span className="bulk-count" style={{ margin: 0 }}>
-                        {directFiles.length} file{directFiles.length === 1 ? '' : 's'} selected ({fmt(directFiles.reduce((acc, f) => acc + f.size, 0))})
-                      </span>
-                      <button
-                        type="button"
-                        className="quiet-button"
-                        onClick={() => setDirectFiles([])}
-                        disabled={directBusy}
-                        style={{ fontSize: '12px', padding: '2px 8px' }}
-                      >
-                        Clear files
-                      </button>
+                  {sandbox && (
+                    <div style={{ background: 'rgba(241, 196, 15, 0.08)', border: '1px solid rgba(241, 196, 15, 0.2)', padding: '10px 12px', fontSize: '12px', color: '#f1c40f', marginBottom: '12px', lineHeight: '1.4' }}>
+                      ⚠️ <strong>Sandbox Mode is ON</strong>. Uploads will be simulated locally. To push files to Cloudflare R2, turn Sandbox Mode OFF in the header.
                     </div>
+                  )}
 
-                    <div className="direct-file-list" style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px' }}>
-                      {directFiles.map((file, i) => (
-                        <div key={i} className="file-info-badge" style={{ margin: 0, padding: '6px 10px', alignItems: 'center' }}>
-                          <span className="file-name" style={{ fontSize: '12px' }}>{file.name} ({fmt(file.size)})</span>
-                          {!directBusy && (
-                            <button
-                              type="button"
-                              onClick={() => removeDirectFile(i)}
-                              style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                  <button
+                    className="ink-button"
+                    onClick={startBulkUpload}
+                    disabled={uploadBusy}
+                    style={{ width: '100%', marginTop: '10px' }}
+                  >
+                    {uploadBusy
+                      ? `Uploading...`
+                      : failedUploads.length > 0
+                        ? `Retry Failed Uploads (${failedUploads.length})`
+                        : 'Start Cloud Upload'}
+                  </button>
+
+                  {/* Progress bar */}
+                  {uploadBusy && (
+                    <div className="bulk-progress-wrap">
+                      <div className="bulk-progress-bar" style={{ width: `${Math.round((uploadProgress / (failedUploads.length > 0 ? failedUploads.length : uploadFiles.length)) * 100)}%` }} />
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* Options Sidebar (Tags & WebP Settings) */}
-              <div style={{ background: 'var(--paper-deep)', border: '1px solid var(--border)', padding: '16px' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
-                  Metadata Options (Optional)
-                </h4>
+                  {/* Status, ETA & Upload Speed */}
+                  {uploadStatus && (
+                    <div className="bulk-status-text" style={{ marginTop: '12px' }}>
+                      <p style={{ margin: 0, fontWeight: '600', color: 'var(--ink)' }}>{uploadStatus}</p>
+                      <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
+                        {uploadSpeed && <span>Speed: <strong style={{ color: '#2ecc71' }}>{uploadSpeed}</strong></span>}
+                        {uploadEta && <span>ETA: <strong className="bulk-eta">{uploadEta}</strong></span>}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>
-                    Select existing tags:
+              {/* Live console terminal */}
+              {uploadLogs.length > 0 && (
+                <div style={{ marginTop: '15px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                    Activity Logs
                   </label>
-                  <div className="tag-row" style={{ marginBottom: '8px', maxHeight: '100px', overflowY: 'auto' }}>
-                    {availableTags.map((tag) => (
-                      <button
-                        type="button"
-                        key={tag}
-                        className={directTags.includes(tag) ? 'tag selected' : 'tag'}
-                        onClick={() => directTags.includes(tag) ? removeDirectTag(tag) : addDirectTag(tag)}
-                        style={{ fontSize: '11px', padding: '3px 8px' }}
-                      >
-                        {tag}
-                      </button>
+                  <div className="upload-console-log">
+                    {uploadLogs.map((log, index) => (
+                      <div key={index} className="log-line">{log}</div>
                     ))}
                   </div>
+                </div>
+              )}
 
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <input
-                      type="text"
-                      value={directTagInput}
-                      onChange={(e) => setDirectTagInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDirectTag(directTagInput) } }}
-                      placeholder="Or type custom tag"
-                      style={{ flex: 1, padding: '6px 10px', fontSize: '12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--ink)' }}
-                    />
+              {/* Failed uploads retry section */}
+              {!uploadBusy && failedUploads.length > 0 && (
+                <div className="failed-uploads-card">
+                  <h4>⚠️ Failed Uploads Detail</h4>
+                  <div className="failed-uploads-list">
+                    {failedUploads.map((item, index) => (
+                      <div key={index} className="failed-item">
+                        <span className="failed-name">{item.file.name}</span>
+                        <span className="failed-reason">{item.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </AccordionSection>
+
+        {/* ── Section 04: Direct Image Uploader ── */}
+        <AccordionSection id="sec-direct-uploader" num="04" title="Direct Image Uploader">
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
+            Upload individual images (single or multiple) directly to the cloud archive without needing a whole folder.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px', alignItems: 'start' }}>
+            <div>
+              <div
+                className="drop-zone"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDirectDrop}
+                onClick={() => document.getElementById('admin-direct-file-input').click()}
+                style={{ marginBottom: '15px' }}
+              >
+                <input
+                  id="admin-direct-file-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={handleDirectSelect}
+                />
+                <span>+</span>
+                <strong>Choose Image Files or Drop Them Here</strong>
+                <small>Select single or multiple photos (JPEG, PNG, WebP, HEIC)</small>
+              </div>
+
+              {directFiles.length > 0 && (
+                <div className="direct-files-preview">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span className="bulk-count" style={{ margin: 0 }}>
+                      {directFiles.length} file{directFiles.length === 1 ? '' : 's'} selected ({fmt(directFiles.reduce((acc, f) => acc + f.size, 0))})
+                    </span>
                     <button
                       type="button"
                       className="quiet-button"
-                      onClick={() => addDirectTag(directTagInput)}
-                      style={{ fontSize: '12px' }}
+                      onClick={() => setDirectFiles([])}
+                      disabled={directBusy}
+                      style={{ fontSize: '12px', padding: '2px 8px' }}
                     >
-                      Add
+                      Clear files
                     </button>
                   </div>
+
+                  <div className="direct-file-list" style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '15px' }}>
+                    {directFiles.map((file, i) => (
+                      <div key={i} className="file-info-badge" style={{ margin: 0, padding: '6px 10px', alignItems: 'center' }}>
+                        <span className="file-name" style={{ fontSize: '12px' }}>{file.name} ({fmt(file.size)})</span>
+                        {!directBusy && (
+                          <button
+                            type="button"
+                            onClick={() => removeDirectFile(i)}
+                            style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Options Sidebar (Tags & WebP Settings) */}
+            <div style={{ background: 'var(--paper-deep)', border: '1px solid var(--border)', padding: '16px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: 'var(--ink)' }}>
+                Metadata Options (Optional)
+              </h4>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'var(--muted)', marginBottom: '6px' }}>
+                  Select existing tags:
+                </label>
+                <div className="tag-row" style={{ marginBottom: '8px', maxHeight: '100px', overflowY: 'auto' }}>
+                  {availableTags.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      className={directTags.includes(tag) ? 'tag selected' : 'tag'}
+                      onClick={() => directTags.includes(tag) ? removeDirectTag(tag) : addDirectTag(tag)}
+                      style={{ fontSize: '11px', padding: '3px 8px' }}
+                    >
+                      {tag}
+                    </button>
+                  ))}
                 </div>
 
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--ink)', cursor: 'pointer', marginBottom: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={directConvertWebp}
-                      onChange={(e) => setDirectConvertWebp(e.target.checked)}
-                      style={{ accentColor: 'var(--ink)' }}
-                    />
-                    <span>Convert to WebP before cloud upload</span>
-                  </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    value={directTagInput}
+                    onChange={(e) => setDirectTagInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addDirectTag(directTagInput) } }}
+                    placeholder="Or type custom tag"
+                    style={{ flex: 1, padding: '6px 10px', fontSize: '12px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--ink)' }}
+                  />
+                  <button
+                    type="button"
+                    className="quiet-button"
+                    onClick={() => addDirectTag(directTagInput)}
+                    style={{ fontSize: '12px' }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
 
-                  <div className="comparator-slider-wrap" style={{ marginTop: '4px' }}>
-                    <span className="slider-val" style={{ fontSize: '12px', minWidth: '90px' }}>Quality: <strong>{directQuality}%</strong></span>
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      value={directQuality}
-                      onChange={(e) => setDirectQuality(Number(e.target.value))}
-                      style={{ flex: 1 }}
-                    />
-                  </div>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '12px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--ink)', cursor: 'pointer', marginBottom: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={directConvertWebp}
+                    onChange={(e) => setDirectConvertWebp(e.target.checked)}
+                    style={{ accentColor: 'var(--ink)' }}
+                  />
+                  <span>Convert to WebP before cloud upload</span>
+                </label>
+
+                <div className="comparator-slider-wrap" style={{ marginTop: '4px' }}>
+                  <span className="slider-val" style={{ fontSize: '12px', minWidth: '90px' }}>Quality: <strong>{directQuality}%</strong></span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={directQuality}
+                    onChange={(e) => setDirectQuality(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Action Buttons, upload status, report, and logs */}
-            {(directFiles.length > 0 || directLogs.length > 0 || directDone) && (
-              <div className="bulk-panel" style={{ maxWidth: '100%', marginTop: '15px' }}>
-                {directDone && directReport ? (
-                  <div style={{ background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', padding: '15px', marginBottom: '15px' }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
-                      Upload Finished Successfully.
-                    </h4>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: 'var(--ink)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <li>Total Images Uploaded: <strong style={{ color: 'var(--ink)' }}>{directReport.total}</strong></li>
-                      <li>Total Volume Sent: <strong style={{ color: 'var(--ink)' }}>{directReport.size}</strong></li>
-                      <li>Elapsed Time: <strong style={{ color: 'var(--ink)' }}>{directReport.time}</strong></li>
-                      <li>Average Throughput: <strong style={{ color: '#2ecc71' }}>{directReport.speed}</strong></li>
-                    </ul>
+          {/* Action Buttons, upload status, report, and logs */}
+          {(directFiles.length > 0 || directLogs.length > 0 || directDone) && (
+            <div className="bulk-panel" style={{ maxWidth: '100%', marginTop: '15px' }}>
+              {directDone && directReport ? (
+                <div style={{ background: 'rgba(46, 204, 113, 0.08)', border: '1px solid rgba(46, 204, 113, 0.2)', padding: '15px', marginBottom: '15px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+                    Upload Finished Successfully.
+                  </h4>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: 'var(--ink)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <li>Total Images Uploaded: <strong style={{ color: 'var(--ink)' }}>{directReport.total}</strong></li>
+                    <li>Total Volume Sent: <strong style={{ color: 'var(--ink)' }}>{directReport.size}</strong></li>
+                    <li>Elapsed Time: <strong style={{ color: 'var(--ink)' }}>{directReport.time}</strong></li>
+                    <li>Average Throughput: <strong style={{ color: '#2ecc71' }}>{directReport.speed}</strong></li>
+                  </ul>
+                  <button
+                    type="button"
+                    className="ink-button"
+                    onClick={resetDirectUploader}
+                    style={{ width: '100%', marginTop: '12px', padding: '6px', fontSize: '12px' }}
+                  >
+                    Clear &amp; Select More Images
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="bulk-count">
+                    {directFailed.length > 0
+                      ? `${directFailed.length} failed image(s) ready to retry`
+                      : `${directFiles.length} image(s) ready to process`}
+                  </p>
+
+                  {sandbox && (
+                    <div style={{ background: 'rgba(241, 196, 15, 0.08)', border: '1px solid rgba(241, 196, 15, 0.2)', padding: '10px 12px', fontSize: '12px', color: '#f1c40f', marginBottom: '12px', lineHeight: '1.4' }}>
+                      Sandbox Mode is ON. Cloud uploads will be simulated locally.
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
                     <button
                       type="button"
                       className="ink-button"
-                      onClick={resetDirectUploader}
-                      style={{ width: '100%', marginTop: '12px', padding: '6px', fontSize: '12px' }}
+                      onClick={convertAndDownloadDirectZip}
+                      disabled={directExporting || directBusy || !directFiles.length}
+                      style={{ background: 'var(--paper-deep)', border: '1px solid var(--border)', color: 'var(--ink)' }}
                     >
-                      Clear &amp; Select More Images
+                      {directExporting ? `Exporting WebP (${directQuality}%)...` : `Convert & Download WebP (${directQuality}%)`}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="ink-button"
+                      onClick={startDirectUpload}
+                      disabled={directBusy || directExporting || !directFiles.length}
+                    >
+                      {directBusy
+                        ? `Uploading...`
+                        : directFailed.length > 0
+                          ? `Retry Failed Uploads (${directFailed.length})`
+                          : `Start Cloud Upload ${directConvertWebp ? `(WebP ${directQuality}%)` : '(Original)'}`}
                     </button>
                   </div>
-                ) : (
-                  <>
-                    <p className="bulk-count">
-                      {directFailed.length > 0
-                        ? `${directFailed.length} failed image(s) ready to retry`
-                        : `${directFiles.length} image(s) ready to process`}
-                    </p>
 
-                    {sandbox && (
-                      <div style={{ background: 'rgba(241, 196, 15, 0.08)', border: '1px solid rgba(241, 196, 15, 0.2)', padding: '10px 12px', fontSize: '12px', color: '#f1c40f', marginBottom: '12px', lineHeight: '1.4' }}>
-                        Sandbox Mode is ON. Cloud uploads will be simulated locally.
-                      </div>
-                    )}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
-                      <button
-                        type="button"
-                        className="ink-button"
-                        onClick={convertAndDownloadDirectZip}
-                        disabled={directExporting || directBusy || !directFiles.length}
-                        style={{ background: 'var(--paper-deep)', border: '1px solid var(--border)', color: 'var(--ink)' }}
-                      >
-                        {directExporting ? `Exporting WebP (${directQuality}%)...` : `Convert & Download WebP (${directQuality}%)`}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="ink-button"
-                        onClick={startDirectUpload}
-                        disabled={directBusy || directExporting || !directFiles.length}
-                      >
-                        {directBusy
-                          ? `Uploading...`
-                          : directFailed.length > 0
-                            ? `Retry Failed Uploads (${directFailed.length})`
-                            : `Start Cloud Upload ${directConvertWebp ? `(WebP ${directQuality}%)` : '(Original)'}`}
-                      </button>
+                  {directBusy && (
+                    <div className="bulk-progress-wrap">
+                      <div className="bulk-progress-bar" style={{ width: `${Math.round((directProgress / (directFailed.length > 0 ? directFailed.length : directFiles.length)) * 100)}%` }} />
                     </div>
+                  )}
 
-                    {directBusy && (
-                      <div className="bulk-progress-wrap">
-                        <div className="bulk-progress-bar" style={{ width: `${Math.round((directProgress / (directFailed.length > 0 ? directFailed.length : directFiles.length)) * 100)}%` }} />
+                  {directStatus && (
+                    <div className="bulk-status-text" style={{ marginTop: '12px' }}>
+                      <p style={{ margin: 0, fontWeight: '600', color: 'var(--ink)' }}>{directStatus}</p>
+                      <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
+                        {directSpeed && <span>Speed: <strong style={{ color: '#2ecc71' }}>{directSpeed}</strong></span>}
+                        {directEta && <span>ETA: <strong className="bulk-eta">{directEta}</strong></span>}
                       </div>
-                    )}
-
-                    {directStatus && (
-                      <div className="bulk-status-text" style={{ marginTop: '12px' }}>
-                        <p style={{ margin: 0, fontWeight: '600', color: 'var(--ink)' }}>{directStatus}</p>
-                        <div style={{ display: 'flex', gap: '15px', marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
-                          {directSpeed && <span>Speed: <strong style={{ color: '#2ecc71' }}>{directSpeed}</strong></span>}
-                          {directEta && <span>ETA: <strong className="bulk-eta">{directEta}</strong></span>}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {directLogs.length > 0 && (
-                  <div style={{ marginTop: '15px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.05em', marginBottom: '5px' }}>
-                      Activity Logs
-                    </label>
-                    <div className="upload-console-log">
-                      {directLogs.map((log, index) => (
-                        <div key={index} className="log-line" style={getLogStyle(log)}>{log}</div>
-                      ))}
                     </div>
+                  )}
+                </>
+              )}
+
+              {directLogs.length > 0 && (
+                <div style={{ marginTop: '15px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.05em', marginBottom: '5px' }}>
+                    Activity Logs
+                  </label>
+                  <div className="upload-console-log">
+                    {directLogs.map((log, index) => (
+                      <div key={index} className="log-line" style={getLogStyle(log)}>{log}</div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {!directBusy && directFailed.length > 0 && (
-                  <div className="failed-uploads-card">
-                    <h4 style={{ color: '#ef4444' }}>Failed Uploads Detail</h4>
-                    <div className="failed-uploads-list">
-                      {directFailed.map((item, index) => (
-                        <div key={index} className="failed-item">
-                          <span className="failed-name">{item.file.name}</span>
-                          <span className="failed-reason">{item.error}</span>
-                        </div>
-                      ))}
-                    </div>
+              {!directBusy && directFailed.length > 0 && (
+                <div className="failed-uploads-card">
+                  <h4 style={{ color: '#ef4444' }}>Failed Uploads Detail</h4>
+                  <div className="failed-uploads-list">
+                    {directFailed.map((item, index) => (
+                      <div key={index} className="failed-item">
+                        <span className="failed-name">{item.file.name}</span>
+                        <span className="failed-reason">{item.error}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-          </div>
-        </details>
+                </div>
+              )}
+            </div>
+          )}
+        </AccordionSection>
 
         {/* ── Section 05: Tag Manager ── */}
-        <details id="sec-tag-manager">
-          <summary>
-            <span className="q">05</span>
-            <h2>Tag Manager</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <TagManager media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
-          </div>
-          </div>
-        </details>
+        <AccordionSection id="sec-tag-manager" num="05" title="Tag Manager">
+          <TagManager media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
+        </AccordionSection>
 
         {/* ── Section 06: Delete Images ── */}
-        <details id="sec-delete-images">
-          <summary>
-            <span className="q">06</span>
-            <h2>Delete Images</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <DeletionSection media={media} setMedia={setMedia} loading={mediaLoading} />
-          </div>
-          </div>
-        </details>
+        <AccordionSection id="sec-delete-images" num="06" title="Delete Images">
+          <DeletionSection media={media} setMedia={setMedia} loading={mediaLoading} />
+        </AccordionSection>
 
         {/* ── Section 07: Tag Cover Selection ── */}
-        <details id="sec-tag-covers">
-          <summary>
-            <span className="q">07</span>
-            <h2>Tag Cover Selection</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <TagCoverSelection media={media} setMedia={setMedia} loading={mediaLoading} />
-          </div>
-          </div>
-        </details>
+        <AccordionSection id="sec-tag-covers" num="07" title="Tag Cover Selection">
+          <TagCoverSelection media={media} setMedia={setMedia} loading={mediaLoading} />
+        </AccordionSection>
 
         {/* ── Section 08: Metadata & EXIF Editor ── */}
-        <details id="sec-metadata-editor">
-          <summary>
-            <span className="q">08</span>
-            <h2>Metadata &amp; EXIF Editor</h2>
-          </summary>
-          <div className="content-wrap">
-            <div className="content">
-            <MetadataEditorSection media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
-          </div>
-          </div>
-        </details>
+        <AccordionSection id="sec-metadata-editor" num="08" title="Metadata & EXIF Editor">
+          <MetadataEditorSection media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
+        </AccordionSection>
       </div>
     </main>
   )
