@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js'
 import { getThumbnail, saveThumbnail } from './thumbnailCache'
 import { resizeImage } from './thumbnailWorkerClient'
 
@@ -259,12 +262,17 @@ export default function SpaceScene({ media = [] }) {
   const [loadProgress, setLoadProgress] = useState('')
   const [allLoaded, setAllLoaded] = useState(false)
   const [showGuide, setShowGuide] = useState(true)
+  const [motionBlur, setMotionBlur] = useState(true)
 
 
   // FPS and frame delta tracking refs
   const lastFpsUpdateRef = useRef(performance.now())
   const lastFrameTimeRef = useRef(performance.now())
   const frameCountRef = useRef(0)
+
+  // Camera motion velocity tracking
+  const prevCamPosRef = useRef(new THREE.Vector3())
+  const prevCamTargetRef = useRef(new THREE.Vector3())
 
   // Refs to avoid stale closures in event handlers and loop
   const gapXRef = useRef(gapX)
@@ -273,6 +281,8 @@ export default function SpaceScene({ media = [] }) {
   const imageSizeRef = useRef(imageSize)
   const layoutRef = useRef(layout)
   const allLoadedRef = useRef(allLoaded)
+  const autoRotateRef = useRef(autoRotate)
+  const motionBlurRef = useRef(motionBlur)
 
   useEffect(() => { gapXRef.current = gapX }, [gapX])
   useEffect(() => { gapYRef.current = gapY }, [gapY])
@@ -280,6 +290,8 @@ export default function SpaceScene({ media = [] }) {
   useEffect(() => { imageSizeRef.current = imageSize }, [imageSize])
   useEffect(() => { layoutRef.current = layout }, [layout])
   useEffect(() => { allLoadedRef.current = allLoaded }, [allLoaded])
+  useEffect(() => { autoRotateRef.current = autoRotate }, [autoRotate])
+  useEffect(() => { motionBlurRef.current = motionBlur }, [motionBlur])
 
   // Handles setting the layout state and resetting defaults as requested
   const handleSetLayout = (newLayout) => {
@@ -459,7 +471,15 @@ export default function SpaceScene({ media = [] }) {
     const themeObs = new MutationObserver(applyTheme)
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 
-    sceneRef.current = { scene, camera, renderer, controls, meshes: [] }
+    const composer = new EffectComposer(renderer)
+    const renderPass = new RenderPass(scene, camera)
+    composer.addPass(renderPass)
+
+    const afterimagePass = new AfterimagePass()
+    afterimagePass.uniforms['damp'].value = 0.0
+    composer.addPass(afterimagePass)
+
+    sceneRef.current = { scene, camera, renderer, controls, composer, afterimagePass, meshes: [] }
 
     /* Interaction Setup */
     const raycaster = new THREE.Raycaster()
@@ -471,41 +491,44 @@ export default function SpaceScene({ media = [] }) {
     }
 
     const onPointerLeave = () => {
-      mouseRef.current.set(-9999, -9999)
+      mouseRef.current.x = -9999
+      mouseRef.current.y = -9999
+      hoveredMeshRef.current = null
     }
 
-    let startX = 0
-    let startY = 0
-    let startTime = 0
+    let isPointerDragging = false
+    let pointerDownTime = 0
+    let pointerDownPos = { x: 0, y: 0 }
 
     const onPointerDown = (e) => {
-      // A new gesture takes precedence over any in-flight camera motion.
-      animatingCameraRef.current = false
-      startX = e.clientX
-      startY = e.clientY
-      startTime = Date.now()
+      isPointerDragging = false
+      pointerDownTime = performance.now()
+      pointerDownPos = { x: e.clientX, y: e.clientY }
     }
 
     const onPointerUp = (e) => {
-      const dx = e.clientX - startX
-      const dy = e.clientY - startY
-      const dist = Math.hypot(dx, dy)
-      const duration = Date.now() - startTime
+      const dt = performance.now() - pointerDownTime
+      const dx = Math.abs(e.clientX - pointerDownPos.x)
+      const dy = Math.abs(e.clientY - pointerDownPos.y)
 
-      if (dist > 5 || duration > 300) return
+      if (dt > 300 || dx > 5 || dy > 5) {
+        isPointerDragging = true
+      }
 
-      if (e.button === 2) {
-        revertHQTextures(null)
-        if (preZoomCameraPos.current && preZoomCameraTarget.current) {
+      if (isPointerDragging) return
+
+      // Handle backdrop click: reset zoom out to main view
+      if (focusedMeshRef.current !== null && e.target === renderer.domElement) {
+        raycaster.setFromCamera(mouseRef.current, camera)
+        const intersects = raycaster.intersectObjects(sceneRef.current.meshes)
+        if (intersects.length === 0) {
+          revertHQTextures(null)
           targetLookAtRef.current = preZoomCameraTarget.current.clone()
           targetCamPosRef.current = preZoomCameraPos.current.clone()
-        } else {
-          targetLookAtRef.current = new THREE.Vector3(0, 0, 0)
-          targetCamPosRef.current = initialCamPos.current.clone()
+          animatingCameraRef.current = true
+          focusedMeshRef.current = null
+          return
         }
-        animatingCameraRef.current = true
-        focusedMeshRef.current = null
-        return
       }
 
       // Clean left click: zoom to hit image, load high-quality
@@ -550,7 +573,35 @@ export default function SpaceScene({ media = [] }) {
 
           animatingCameraRef.current = true
 
-          triggerHQTextureLoad(hitMesh)
+          loadHighQualityTexture(hitMesh.userData.item).then((tex) => {
+            if (focusedMeshRef.current !== hitMesh) {
+              tex.dispose()
+              return
+            }
+
+            revertHQTextures(hitMesh)
+
+            const oldMap = hitMesh.material.map
+            hitMesh.material.map = tex
+
+            hitMesh.material.depthTest = false
+            hitMesh.renderOrder = 999
+
+            hitMesh.userData.isHighQuality = true
+
+            if (oldMap && oldMap !== hitMesh.userData.thumbnailTex) {
+              oldMap.dispose()
+            }
+
+            const aspect = tex.userData.aspect || 1
+            hitMesh.userData.aspect = aspect
+            const curSize = imageSizeRef.current
+            const w = aspect >= 1 ? curSize : curSize * aspect
+            const h = aspect >= 1 ? curSize / aspect : curSize
+            hitMesh.userData.baseScale.set(w, h, 1)
+          }).catch((err) => {
+            console.error('Failed to load high quality texture', err)
+          })
         }
       }
     }
@@ -563,6 +614,7 @@ export default function SpaceScene({ media = [] }) {
     let frameId = null
     let disposed = false
 
+    const BOUNDS = 300
     const clampTarget = () => {
       const t = controls.target
       t.x = THREE.MathUtils.clamp(t.x, -BOUNDS, BOUNDS)
@@ -666,7 +718,24 @@ export default function SpaceScene({ media = [] }) {
 
       clampTarget()
       controls.update()
-      renderer.render(scene, camera)
+
+      // Motion blur calculation based on camera motion speed
+      const camSpeed = camera.position.distanceTo(prevCamPosRef.current) + controls.target.distanceTo(prevCamTargetRef.current)
+      prevCamPosRef.current.copy(camera.position)
+      prevCamTargetRef.current.copy(controls.target)
+
+      if (motionBlurRef.current && (camSpeed > 0.02 || autoRotateRef.current > 0 || animatingCameraRef.current)) {
+        const targetDamp = Math.min(0.65 + camSpeed * 0.12, 0.84)
+        s.afterimagePass.uniforms['damp'].value = THREE.MathUtils.lerp(s.afterimagePass.uniforms['damp'].value, targetDamp, 0.2)
+      } else {
+        s.afterimagePass.uniforms['damp'].value = THREE.MathUtils.lerp(s.afterimagePass.uniforms['damp'].value, 0.0, 0.25)
+      }
+
+      if (motionBlurRef.current && s.afterimagePass.uniforms['damp'].value > 0.02) {
+        s.composer.render()
+      } else {
+        renderer.render(scene, camera)
+      }
     }
 
     const onVis = () => {
@@ -683,6 +752,7 @@ export default function SpaceScene({ media = [] }) {
       camera.aspect = w / h
       camera.updateProjectionMatrix()
       renderer.setSize(w, h)
+      composer.setSize(w, h)
     })
     resizeObs.observe(container)
 
@@ -1040,6 +1110,18 @@ export default function SpaceScene({ media = [] }) {
                 onClick={() => setDevPlanes((v) => !v)}
               >
                 {devPlanes ? 'on' : 'off'}
+              </button>
+            </div>
+
+            {/* motion blur toggle */}
+            <div className="space-toggle-row">
+              <span className="space-slider-label">Motion blur</span>
+              <button
+                type="button"
+                className={`space-toggle-btn${motionBlur ? ' active' : ''}`}
+                onClick={() => setMotionBlur((v) => !v)}
+              >
+                {motionBlur ? 'on' : 'off'}
               </button>
             </div>
 
