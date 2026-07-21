@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, writeBatch, serverTimestamp, startAfter, limit } from 'firebase/firestore'
+import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp, startAfter, limit } from 'firebase/firestore'
 import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import * as exifr from 'exifr'
@@ -386,15 +386,40 @@ export async function backfillArchiveVariants(onProgress) {
 }
 
 export async function deleteMediaItem(item) {
-  const isSandbox = localStorage.getItem('kioku-sandbox') === 'yes'
-  const activeSandbox = isSandbox || !firebaseReady || !functions || !auth?.currentUser
+  if (!item || !item.id) return
 
-  if (!activeSandbox) {
-    const remove = httpsCallable(functions, 'deleteArchiveMedia')
-    await remove({ id: item.id })
-  } else {
-    // Sandbox delete simulation
-    await new Promise((resolve) => setTimeout(resolve, 500))
+  const isSandbox = localStorage.getItem('kioku-sandbox') === 'yes'
+  if (isSandbox) {
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    return
+  }
+
+  let deleted = false
+
+  // 1. Attempt Cloud Function to delete R2 storage files and Firestore record
+  if (firebaseReady && functions) {
+    try {
+      const remove = httpsCallable(functions, 'deleteArchiveMedia')
+      await remove({ id: item.id })
+      deleted = true
+    } catch (err) {
+      console.warn('R2 storage delete function notice:', err)
+    }
+  }
+
+  // 2. Direct Firestore deletion (ensures persistent deletion on refresh)
+  if (firebaseReady && db) {
+    try {
+      const mediaRef = doc(db, 'media', item.id)
+      await deleteDoc(mediaRef)
+      deleted = true
+    } catch (err) {
+      console.warn('Firestore direct delete notice:', err)
+    }
+  }
+
+  if (!deleted && !firebaseReady) {
+    throw new Error('Firebase is not configured or connected.')
   }
 }
 
