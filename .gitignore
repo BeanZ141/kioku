@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Production output
+dist/
+
+# Environment / Secrets
+.env
+.env.local
+.env.*.local
+
+# Cache and temporary files
+.camera_cache.json
+scratch/
+*.log
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

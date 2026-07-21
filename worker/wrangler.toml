@@ -1,0 +1,10 @@
+name = "kioku-upload"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "kioku-media"
+
+# Firebase Functions signs short-lived, single-object tickets with this secret.
+#   npx wrangler secret put ARCHIVE_UPLOAD_SECRET
