@@ -941,15 +941,108 @@ html[data-theme="light"] .space-load-bar-fill {
     background: rgba(0, 0, 0, .5)
 }
 
-.space-controls {
+.space-controls-wrapper {
     position: absolute;
     bottom: 20px;
     right: 20px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    pointer-events: none;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.space-controls-wrapper > * {
+    pointer-events: auto;
+}
+
+.space-nav-guide {
+    padding: 14px 18px;
+    border: 0.5px solid #9f9f9f33;
+    background: transparent;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--ink);
+    font-family: "SF Pro", sans-serif;
+    font-size: 10px;
+    letter-spacing: .05em;
+    user-select: none;
+    width: 210px;
+    box-sizing: border-box;
+}
+
+.space-nav-guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+}
+
+.space-nav-guide-title {
+    font-weight: 600;
+    font-size: 9px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.8;
+}
+
+.space-nav-guide-close {
+    background: none;
+    border: none;
+    color: var(--ink);
+    opacity: 0.5;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.space-nav-guide-close:hover {
+    opacity: 1;
+}
+
+.space-nav-guide-items {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.space-nav-guide-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+}
+
+.space-nav-guide-label {
+    opacity: 0.55;
+}
+
+.space-nav-guide-action {
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-size: 9px;
+    opacity: 0.95;
+}
+
+.space-controls {
+    position: relative;
+    bottom: auto;
+    right: auto;
     z-index: 5;
     padding: 20px 30px;
     border: 0.5px solid #9f9f9f33;
     background: transparent;
     backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     color: var(--ink);
     font-family: "SF Pro";
     font-size: 10px;

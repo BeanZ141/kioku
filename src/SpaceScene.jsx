@@ -258,10 +258,12 @@ export default function SpaceScene({ media = [] }) {
   const [devPlanes, setDevPlanes] = useState(false)
   const [loadProgress, setLoadProgress] = useState('')
   const [allLoaded, setAllLoaded] = useState(false)
+  const [showGuide, setShowGuide] = useState(true)
 
 
-  // FPS tracking refs
+  // FPS and frame delta tracking refs
   const lastFpsUpdateRef = useRef(performance.now())
+  const lastFrameTimeRef = useRef(performance.now())
   const frameCountRef = useRef(0)
 
   // Refs to avoid stale closures in event handlers and loop
@@ -582,13 +584,21 @@ export default function SpaceScene({ media = [] }) {
         lastFpsUpdateRef.current = timeNow
       }
 
+      // Calculate frame delta time for silky smooth 60/120/144Hz interpolation
+      const dt = Math.min((timeNow - lastFrameTimeRef.current) / 1000, 0.1)
+      lastFrameTimeRef.current = timeNow
+
       const s = sceneRef.current
       if (!s) return
 
+      const dampCam = 1 - Math.exp(-12 * dt)
+      const dampScale = 1 - Math.exp(-14 * dt)
+      const dampPos = 1 - Math.exp(-10 * dt)
+
       // Camera smooth zoom / tracking
       if (animatingCameraRef.current && targetCamPosRef.current && targetLookAtRef.current) {
-        camera.position.lerp(targetCamPosRef.current, 0.16)
-        controls.target.lerp(targetLookAtRef.current, 0.16)
+        camera.position.lerp(targetCamPosRef.current, dampCam)
+        controls.target.lerp(targetLookAtRef.current, dampCam)
 
         if (camera.position.distanceTo(targetCamPosRef.current) < 0.05 &&
           controls.target.distanceTo(targetLookAtRef.current) < 0.05) {
@@ -641,11 +651,11 @@ export default function SpaceScene({ media = [] }) {
         // Scale using pre-allocated vector
         const baseScale = mesh.userData.baseScale
         _tmpScale.copy(baseScale).multiplyScalar(targetScale)
-        mesh.scale.lerp(_tmpScale, 0.12)
+        mesh.scale.lerp(_tmpScale, dampScale)
 
         // Displace using pre-allocated vector
         _tmpPos.copy(basePos).add(_tmpDisp)
-        mesh.position.lerp(_tmpPos, 0.1)
+        mesh.position.lerp(_tmpPos, dampPos)
 
         if (layoutRef.current === 'spherical') {
           mesh.lookAt(camera.position)
@@ -959,51 +969,83 @@ export default function SpaceScene({ media = [] }) {
         </div>
       )}
 
-      <aside className="space-controls">
-        <p className="space-controls-label">Controls</p>
-        <div className="space-controls-body">
-
-          {/* layout toggle */}
-          <div className="space-toggle-row">
-            <span className="space-slider-label">Layout</span>
-            <div className="space-toggle-group">
+      <div className="space-controls-wrapper">
+        {showGuide && (
+          <div className="space-nav-guide">
+            <div className="space-nav-guide-header">
+              <span className="space-nav-guide-title">Navigation</span>
               <button
                 type="button"
-                className={`space-toggle-btn${layout === 'spherical' ? ' active' : ''}`}
-                onClick={() => handleSetLayout('spherical')}
+                className="space-nav-guide-close"
+                onClick={() => setShowGuide(false)}
+                aria-label="Close navigation guide"
               >
-                Spherical
-              </button>
-              <button
-                type="button"
-                className={`space-toggle-btn${layout === 'scattered' ? ' active' : ''}`}
-                onClick={() => handleSetLayout('scattered')}
-              >
-                Scattered
+                ×
               </button>
             </div>
+            <div className="space-nav-guide-items">
+              <div className="space-nav-guide-item">
+                <span className="space-nav-guide-label">Left Click + Drag</span>
+                <span className="space-nav-guide-action">Rotate</span>
+              </div>
+              <div className="space-nav-guide-item">
+                <span className="space-nav-guide-label">Right Click + Drag</span>
+                <span className="space-nav-guide-action">Pan</span>
+              </div>
+              <div className="space-nav-guide-item">
+                <span className="space-nav-guide-label">Scroll Wheel</span>
+                <span className="space-nav-guide-action">Zoom</span>
+              </div>
+            </div>
           </div>
+        )}
 
-          {slider('Spread X', gapX, setGapX, 2, 24, 0.5)}
-          {slider('Spread Y', gapY, setGapY, 2, 24, 0.5)}
-          {slider('Spread Z', gapZ, setGapZ, 2, 24, 0.5)}
-          {slider('Image size', imageSize, setImageSize, 1, 16, 0.2)}
-          {slider('Auto-rotate', autoRotate, setAutoRotate, 0, 4, 0.1)}
+        <aside className="space-controls">
+          <p className="space-controls-label">Controls</p>
+          <div className="space-controls-body">
 
-          {/* dev toggle */}
-          <div className="space-toggle-row">
-            <span className="space-slider-label">Dev planes</span>
-            <button
-              type="button"
-              className={`space-toggle-btn${devPlanes ? ' active' : ''}`}
-              onClick={() => setDevPlanes((v) => !v)}
-            >
-              {devPlanes ? 'on' : 'off'}
-            </button>
+            {/* layout toggle */}
+            <div className="space-toggle-row">
+              <span className="space-slider-label">Layout</span>
+              <div className="space-toggle-group">
+                <button
+                  type="button"
+                  className={`space-toggle-btn${layout === 'spherical' ? ' active' : ''}`}
+                  onClick={() => handleSetLayout('spherical')}
+                >
+                  Spherical
+                </button>
+                <button
+                  type="button"
+                  className={`space-toggle-btn${layout === 'scattered' ? ' active' : ''}`}
+                  onClick={() => handleSetLayout('scattered')}
+                >
+                  Scattered
+                </button>
+              </div>
+            </div>
+
+            {slider('Spread X', gapX, setGapX, 2, 24, 0.5)}
+            {slider('Spread Y', gapY, setGapY, 2, 24, 0.5)}
+            {slider('Spread Z', gapZ, setGapZ, 2, 24, 0.5)}
+            {slider('Image size', imageSize, setImageSize, 1, 16, 0.2)}
+            {slider('Auto-rotate', autoRotate, setAutoRotate, 0, 4, 0.1)}
+
+            {/* dev toggle */}
+            <div className="space-toggle-row">
+              <span className="space-slider-label">Dev planes</span>
+              <button
+                type="button"
+                className={`space-toggle-btn${devPlanes ? ' active' : ''}`}
+                onClick={() => setDevPlanes((v) => !v)}
+              >
+                {devPlanes ? 'on' : 'off'}
+              </button>
+            </div>
+
           </div>
-
-        </div>
-      </aside>
+        </aside>
+      </div>
     </div>
   )
 }
