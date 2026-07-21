@@ -6,18 +6,6 @@ html.calendar-snap {
     scroll-behavior: smooth;
 }
 
-html, body {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-}
-
 html.lenis,
 html.lenis body {
     height: auto;
@@ -1825,6 +1813,19 @@ html[data-theme="light"] .space-fps-counter {
 }
 
 /* ─────────── Admin Panel & Image Comparator ─────────── */
+body:has(.admin-view),
+html:has(.admin-view) {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+body:has(.admin-view)::-webkit-scrollbar,
+html:has(.admin-view)::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 .admin-view {
     padding: 30px 40px 200px;
     max-width: 1480px;
