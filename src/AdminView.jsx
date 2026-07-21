@@ -215,7 +215,7 @@ function MetadataEditorSection({ media, setMedia, loading, refreshMedia }) {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
           {/* Image Selection Grid */}
-          <div className="tag-manager-grid" style={{ maxHeight: '720px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
+          <div className="tag-manager-grid" style={{ maxHeight: '500px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
               {media.map((item) => {
                 const isSelected = item.id === selectedId
@@ -494,7 +494,7 @@ function TagManager({ media, setMedia, loading, refreshMedia }) {
         {tagsToApply.length > 0 && <p className="result-count">Will apply: {tagsToApply.join(', ')}</p>}
       </div>
 
-      <div className="tag-manager-grid" style={{ maxHeight: '720px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
+      <div className="tag-manager-grid" style={{ maxHeight: '500px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
           {media.map((item) => (
             <button
@@ -566,7 +566,7 @@ function DeletionSection({ media, setMedia, loading }) {
         <p>Loading archive images...</p>
       ) : (
         <>
-          <div className="tag-manager-grid" style={{ maxHeight: '780px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
+          <div className="tag-manager-grid" style={{ maxHeight: '500px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
               {media.map((item) => (
                 <button
@@ -718,7 +718,7 @@ function TagCoverSelection({ media, setMedia, loading }) {
               {filteredMedia.length === 0 ? (
                 <p style={{ fontStyle: 'italic', margin: '20px 0' }}>No images match this tag.</p>
               ) : (
-                <div className="tag-manager-grid" style={{ maxHeight: '780px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
+                <div className="tag-manager-grid" style={{ maxHeight: '500px', overflowY: 'auto', overscrollBehavior: 'contain', border: '1px solid var(--border)', background: 'var(--paper-deep)', padding: '6px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
                     {filteredMedia.map((item) => {
                       const isCover = item.coverForTags?.includes(selectedTag)

@@ -6,6 +6,18 @@ html.calendar-snap {
     scroll-behavior: smooth;
 }
 
+html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 html.lenis,
 html.lenis body {
     height: auto;
@@ -1897,6 +1909,30 @@ html[data-theme="light"] .admin-accordion-header:hover {
 
 .admin-accordion-section.is-open .admin-accordion-inner {
     padding: 20px 10px 40px;
+}
+
+.tag-manager-grid {
+    max-height: 500px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tag-manager-grid::-webkit-scrollbar {
+    width: 5px;
+}
+
+.tag-manager-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tag-manager-grid::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 3px;
+}
+
+.tag-manager-grid::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
 }
 
 .admin-header {
