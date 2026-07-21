@@ -1325,12 +1325,13 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
 
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {/* ── Section 01: Single Image Upload & Quality Comparator ── */}
-        <details id="sec-comparator" open>
+        <details id="sec-comparator">
           <summary>
             <span className="q">01</span>
             <h2>Quality Comparator</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: '40px', alignItems: 'start' }}>
               <div>
                 <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
@@ -1436,11 +1437,10 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
                       Download Converted WebP
                     </a>
                   </div>
-                )}
-              </div>
             </div>
           </div>
-        </details>
+        </div>
+      </details>
 
         {/* ── Section 02: Bulk Folder Converter ── */}
         <details id="sec-bulk-converter">
@@ -1448,7 +1448,8 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">02</span>
             <h2>Bulk Folder Converter</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
               Select a folder → convert all images to WebP → download as ZIP.
               <br />
@@ -1491,6 +1492,7 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
               </div>
             )}
           </div>
+          </div>
         </details>
 
         {/* ── Section 03: Bulk Folder Uploader ── */}
@@ -1499,7 +1501,8 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">03</span>
             <h2>Bulk Folder Uploader</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
               Upload a folder of converted WebP images directly to the cloud storage archive.
             </p>
@@ -1615,7 +1618,8 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">04</span>
             <h2>Direct Image Uploader</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '15px' }}>
               Upload individual images (single or multiple) directly to the cloud archive without needing a whole folder.
             </p>
@@ -1858,6 +1862,7 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
               </div>
             )}
           </div>
+          </div>
         </details>
 
         {/* ── Section 05: Tag Manager ── */}
@@ -1866,8 +1871,10 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">05</span>
             <h2>Tag Manager</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <TagManager media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
+          </div>
           </div>
         </details>
 
@@ -1877,8 +1884,10 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">06</span>
             <h2>Delete Images</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <DeletionSection media={media} setMedia={setMedia} loading={mediaLoading} />
+          </div>
           </div>
         </details>
 
@@ -1888,8 +1897,10 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">07</span>
             <h2>Tag Cover Selection</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <TagCoverSelection media={media} setMedia={setMedia} loading={mediaLoading} />
+          </div>
           </div>
         </details>
 
@@ -1899,8 +1910,10 @@ export default function AdminView({ theme: propTheme, toggleTheme: propToggleThe
             <span className="q">08</span>
             <h2>Metadata &amp; EXIF Editor</h2>
           </summary>
-          <div className="content">
+          <div className="content-wrap">
+            <div className="content">
             <MetadataEditorSection media={media} setMedia={setMedia} loading={mediaLoading} refreshMedia={refreshMedia} />
+          </div>
           </div>
         </details>
       </div>
